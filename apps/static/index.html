@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>To-Do List</title>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      background: #f4f4f4;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .todo-container {
+      background: white;
+      width: 350px;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #333;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 10px;
+    }
+
+    input {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    button {
+      padding: 10px 15px;
+      border: none;
+      background: #007bff;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #0056b3;
+    }
+
+    ul {
+      list-style: none;
+      margin-top: 20px;
+    }
+
+    li {
+      background: #f9f9f9;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 5px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .delete-btn {
+      background: red;
+      padding: 5px 10px;
+      border-radius: 4px;
+    }
+
+    .delete-btn:hover {
+      background: darkred;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="todo-container">
+    <h1>To-Do List</h1>
+
+    <div class="input-group">
+      <input type="text" id="taskInput" placeholder="Enter a task">
+      <button onclick="addTask()">Add</button>
+    </div>
+
+    <ul id="taskList"></ul>
+  </div>
+
+  <script>
+    function addTask() {
+      const taskInput = document.getElementById("taskInput");
+      const taskText = taskInput.value.trim();
+
+      if (taskText === "") {
+        alert("Please enter a task");
+        return;
+      }
+
+      const li = document.createElement("li");
+
+      li.innerHTML = `
+        <span>${taskText}</span>
+        <button class="delete-btn" onclick="removeTask(this)">Delete</button>
+      `;
+
+      document.getElementById("taskList").appendChild(li);
+
+      taskInput.value = "";
+    }
+
+    function removeTask(button) {
+      button.parentElement.remove();
+    }
+  </script>
+
+</body>
+</html>
+
+
+<!--
+Running static website:
+pwd
+sudo apt update
+sudo apt install nginx -y
+sudo systemctl start nginx
+sudo systemctl status nginx
+cd /var/www/html
+sudo nano index.nginx-debian.html
+sudo systemctl restart nginx
+http://your-vm-ip
+
+
+File sharing:
+ssh into both vm
+On vm1:
+cat ~/.ssh
+ssh-keygen
+ls ~/.ssh
+cat ~/.ssh/id_rsa.pub
+copy the key
+ON vm2:
+mkdir -p ~/.ssh
+nano ~/.ssh/authorized_keys
+
+chmod 700 ~/.ssh
+chmod 600 ~/.ssh/authorized_keys
+ON vm1:
+ls
+echo “hello from vm1” > test.txt
+ls
+scp test.txt azureuser@private_ip_of_vm2:/home/azureuser/
+ON vm2:
+ls
+cat test.txt
+
+
+MERN deployement:
+1. SSH into VM
+ssh azureuser@your-vm-ip
+
+2. Install dependencies
+sudo apt update
+sudo apt install nodejs npm nginx git -y
+sudo npm install -g pm2
+
+3. Clone Repository
+git clone https://github.com/Sanika994777/lab.git
+cd lab/apps/mern_blog
+
+4. Backend Setup
+cd server
+npm install
+
+nano .env:
+PORT=5001
+MONGO_URI=mongodb+srv://sanikasurange_db_user:<db_password>@cluster0.bwohu6x.mongodb.net/db 
+
+Run backend:
+pm2 start index.js --name backend
+pm2 save
+
+5. Frontend Setup (Vite)
+cd ../client
+npm install
+
+Create .env:
+VITE_API_BASE_URL=/api
+
+Build project:
+npm run build
+
+6. Fix Permissions
+sudo chmod -R 755 /home/azureuser
+sudo chown -R www-data:www-data /home/azureuser/yourrepo/apps/mern_blog/client/dist
+
+7. Configure Nginx
+sudo nano /etc/nginx/sites-available/default
+
+Add:
+
+server {
+    listen 80;
+
+    location / {
+        root /home/azureuser/lab/apps/mern_blog/client/dist;
+        index index.html;
+        try_files $uri /index.html;
+    }
+
+    location /api/ {
+        proxy_pass http://localhost:5001;
+    }
+}
+
+8. Restart Nginx
+sudo nginx -t
+sudo systemctl restart nginx
+
+9. Test
+-->
