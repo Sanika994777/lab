@@ -169,43 +169,58 @@ cat test.txt
 
 
 MERN deployement:
+Backend:
+5001 TCP Any
+
 1. SSH into VM
 ssh azureuser@your-vm-ip
 
 2. Install dependencies
 sudo apt update
-sudo apt install nodejs npm nginx git -y
+sudo apt install nodejs npm git -y
 sudo npm install -g pm2
 
 3. Clone Repository
 git clone https://github.com/Sanika994777/lab.git
-cd lab/apps/mern_blog
+cd lab/apps/mern_blog/server
 
-4. Backend Setup
-cd server
 npm install
+npm install cors dotenv
 
 nano .env:
 PORT=5001
 MONGO_URI=mongodb+srv://sanikasurange_db_user:<db_password>@cluster0.bwohu6x.mongodb.net/db 
 
+nano server.js
+app.use(cors({
+  origin: "http://FRONTEND_PUBLIC_IP"
+}));
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT}`);
+});
+
 Run backend:
 pm2 start index.js --name backend
 pm2 save
+pm2 startup
+pm2 status
 
-5. Frontend Setup (Vite)
-cd ../client
+Frontend:
+80	TCP
+
+sudo apt update
+sudo apt install nodejs npm nginx git -y
+git clone https://github.com/Sanika994777/lab.git
+cd lab/apps/mern_blog/client
+
 npm install
 
 Create .env:
-VITE_API_BASE_URL=/api
+VITE_API_BASE_URL=http://BACKEND_PUBLIC_IP:5001/api
 
 Build project:
+sudo rm -rf dist
 npm run build
-
-6. Fix Permissions
-sudo chmod -R 755 /home/azureuser
-sudo chown -R www-data:www-data /home/azureuser/yourrepo/apps/mern_blog/client/dist
 
 7. Configure Nginx
 sudo nano /etc/nginx/sites-available/default
@@ -215,20 +230,23 @@ Add:
 server {
     listen 80;
 
+    root /home/azureuser/lab/apps/mern_blog/client/dist;
+    index index.html;
+
     location / {
-        root /home/azureuser/lab/apps/mern_blog/client/dist;
-        index index.html;
         try_files $uri /index.html;
     }
-
-    location /api/ {
-        proxy_pass http://localhost:5001;
-    }
 }
+
+6. Fix Permissions
+sudo chmod -R 755 /home/azureuser
+sudo chown -R www-data:www-data /home/azureuser/yourrepo/apps/mern_blog/client/dist
+
 
 8. Restart Nginx
 sudo nginx -t
 sudo systemctl restart nginx
+sudo systemctl enable nginx
 
 9. Test
 -->
