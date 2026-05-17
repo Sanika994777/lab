@@ -249,4 +249,76 @@ sudo systemctl restart nginx
 sudo systemctl enable nginx
 
 9. Test
+
+
+
+***************************************************************************************************************
+1. SSH into VM
+ssh azureuser@your-vm-ip
+
+2. Install dependencies
+sudo apt update
+sudo apt install nodejs npm nginx git -y
+sudo npm install -g pm2
+
+3. Clone Repository
+git clone https://github.com/Sanika994777/lab.git
+cd lab/apps/e_commerce
+ 
+4. Backend Setup
+cd server
+npm install
+
+Create .env:
+PORT=5001
+MONGO_URI=mongodb+srv://sanikasurange_db_user:sanika123@cluster0.bwohu6x.mongodb.net/ecom
+
+Run backend:
+pm2 start index.js --name backend
+pm2 save
+
+5. Frontend Setup (Vite)
+cd ../client
+npm install
+
+Create .env:
+VITE_API_BASE_URL=/api
+
+Build project:
+npm run build
+
+
+6. Fix Permissions
+sudo chmod -R 755 /home/azureuser
+sudo chown -R www-data:www-data /home/azureuser/lab/apps/e_commerce/client/dist
+
+7. Configure Nginx
+sudo nano /etc/nginx/sites-available/default
+
+Add:
+
+server {
+    listen 80;
+
+    location / {
+        root /home/azureuser/lab/apps/e_/client/dist;
+        index index.html;
+        try_files $uri /index.html;
+    }
+
+    location /api/ {
+        proxy_pass http://localhost:5001;
+    }
+}
+
+8. Restart Nginx
+sudo nginx -t
+sudo systemctl restart nginx
+
+9. Test
+Frontend: http://your-vm-ip
+API: http://your-vm-ip/api/posts
+
+
 -->
+
