@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ShopBot</title>
+
+</head>
+<body>
+<style>
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  font-family:Arial;
+}
+
+body{
+  display:flex;
+  height:100vh;
+}
+
+/* SHOP */
+#shop{
+  width:60%;
+  padding:20px;
+  background:#f5f5f5;
+}
+
+.sub{
+  margin:10px 0 20px;
+}
+
+.grid{
+  display:flex;
+  flex-wrap:wrap;
+  gap:15px;
+}
+
+.card{
+  background:white;
+  padding:15px;
+  border-radius:10px;
+  width:180px;
+  text-align:center;
+}
+
+.card-emoji{
+  font-size:40px;
+}
+
+.price{
+  margin:10px 0;
+}
+
+button{
+  padding:8px 12px;
+  border:none;
+  background:black;
+  color:white;
+  border-radius:5px;
+  cursor:pointer;
+}
+
+.cart-bar{
+  margin-top:20px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  background:white;
+  padding:15px;
+  border-radius:10px;
+}
+
+/* CHAT */
+#chat{
+  width:40%;
+  border-left:1px solid #ccc;
+  display:flex;
+  flex-direction:column;
+}
+
+#chat-header{
+  padding:15px;
+  background:black;
+  color:white;
+}
+
+.dot{
+  height:10px;
+  width:10px;
+  background:lime;
+  border-radius:50%;
+  display:inline-block;
+}
+
+#messages{
+  flex:1;
+  padding:15px;
+  overflow:auto;
+  background:#fafafa;
+}
+
+.msg{
+  padding:10px;
+  margin-bottom:10px;
+  border-radius:8px;
+  max-width:80%;
+}
+
+.bot{
+  background:#e5e5e5;
+}
+
+.user{
+  background:black;
+  color:white;
+  margin-left:auto;
+}
+
+#chat-input{
+  display:flex;
+  padding:10px;
+  border-top:1px solid #ccc;
+}
+
+#user-input{
+  flex:1;
+  padding:10px;
+  border:1px solid #ccc;
+  border-radius:5px;
+  margin-right:10px;
+}
+
+</style>
+<div id="shop">
+  <h1>SHOPBOT</h1>
+  <div class="grid" id="product-grid"></div>
+  <div class="cart-bar">
+    <span id="cart-summary">Cart: 0 items — ₹0</span>
+    <button onclick="askAboutCart()">Ask bot about cart</button>
+  </div>
+</div>  
+
+<div id="chat">
+  <div id="chat-header">ShopBot Assistant</div>
+  <div id="messages"></div>
+  <div id="chat-input">
+    <input id="user-input" type="text" placeholder="Ask me anything..." onkeydown="if(event.key==='Enter') sendMsg()" />
+    <button onclick="sendMsg()">Send</button>
+  </div>
+</div>
+
+<script>
+const products = [
+  { id:1, name:"Wireless Earbuds",    price:1999, emoji:"🎧", desc:"Noise-cancelling, 24hr battery" },
+  { id:2, name:"Mechanical Keyboard", price:3499, emoji:"⌨️", desc:"RGB, tactile switches" },
+  { id:4, name:"Desk Lamp",           price:899,  emoji:"💡", desc:"LED, adjustable brightness" },
+];
+
+const responses = [
+  { keys: ["hi","hello","hey","howdy"],                reply: "Hey there! 👋 Welcome to ShopBot. Ask me about products, prices, delivery, or your cart!" },
+  { keys: ["earbuds","headphone","audio","sound"],     reply: "🎧 Wireless Earbuds (₹1999) — noise-cancelling with 24hr battery. Great for calls and music!" },
+  { keys: ["keyboard","typing","mechanical","keys"],   reply: "⌨️ Mechanical Keyboard (₹3499) — RGB lighting and tactile switches. A solid desk upgrade!" },
+  { keys: ["lamp","light","led","brightness"],         reply: "💡 Desk Lamp (₹899) — LED with adjustable brightness. Easy on the eyes!" },
+  { keys: ["price","cost","range","how much"],         reply: "Prices range from ₹299 (Cable Organizer) to ₹3499 (Keyboard). Something for every budget!" },
+  { keys: ["cheap","budget","affordable","under 500"], reply: "Looking for deals? Try Cable Organizer (₹299) or Phone Stand (₹499)! 💸" },
+  { keys: ["best","popular","recommend","top pick"],   reply: "Best sellers: Wireless Earbuds 🎧 and Mechanical Keyboard ⌨️ — both crowd favourites!" },
+  { keys: ["cart","basket","bag","added"],             reply: "Click '+ Add to Cart' on any product, then hit 'Ask bot about cart' for a full summary!" },
+  { keys: ["delivery","shipping","dispatch","arrive"], reply: "We deliver in 3–5 business days. Free shipping on orders above ₹1500! 🚚" },
+  { keys: ["return","refund","exchange","policy"],     reply: "We offer a 7-day no-questions-asked return policy on all items. 🔄" },
+  { keys: ["discount","offer","coupon","sale","deal"], reply: "Use code SHOPBOT10 at checkout for 10% off your first order! 🎉" },
+  { keys: ["warranty","guarantee","defect","broken"],  reply: "All products come with a 6-month warranty. Contact support if anything goes wrong. 🛡️" },
+  { keys: ["payment","pay","upi","cod","card"],        reply: "We accept UPI, credit/debit cards, and Cash on Delivery. Safe checkout! 💳" },
+  { keys: ["help","support","contact","assist"],       reply: "I can help with products, prices, shipping, returns, and payments. Just ask! 😊" },
+  { keys: ["bye","goodbye","thanks","thank you"],      reply: "Thanks for visiting ShopBot! Happy shopping! 🛍️" },
+];
+
+function getBotReply(text) {
+  const lower = text.toLowerCase();
+  if (lower.includes("add") &&(lower.includes("cart") || lower.includes("basket")))
+  {
+    for (const p of products) {
+      const words = p.name.toLowerCase().split(" ");
+      if (
+        words.some(w => lower.includes(w)) ||
+        lower.includes(p.name.toLowerCase())
+      ) {
+        addToCart(p.id);
+        return `✅ ${p.name} added to your cart!`;
+      }
+    }
+    return "I couldn't find that product. Try typing the exact product name.";
+  }
+
+  // ---- PRODUCT INFO ----
+  for (const p of products) {
+    if (lower.includes(p.name.toLowerCase().split(" ")[0])) {
+      return `${p.emoji} ${p.name} — ₹${p.price}. ${p.desc}. Want to add it to your cart?`;
+    }
+  }
+
+  // ---- NORMAL RESPONSES ----
+  for (const entry of responses) {
+    if (entry.keys.some(k => lower.includes(k))) {
+      return entry.reply;
+    }
+  }
+
+  return "Hmm, I'm not sure about that. Try asking about a product, delivery, returns, or payment! 🤔";
+}
+
+let cart = [];
+
+const grid = document.getElementById('product-grid');
+products.forEach(p => {
+  grid.innerHTML += `<div class="card">
+    <div class="card-emoji">${p.emoji}</div>
+    <h3>${p.name}</h3>
+    <div class="price">₹${p.price}</div>
+    <button class="add-btn" onclick="addToCart(${p.id})">+ Add to Cart</button>
+  </div>`;
+});
+
+function addToCart(id) {
+  const p = products.find(x => x.id === id);
+  const ex = cart.find(x => x.id === id);
+  if (ex) ex.qty++; else cart.push({...p, qty:1});
+  updateCartBar();
+  botMsg(`Added ${p.name} to your cart! 🛒`);
+}
+
+function updateCartBar() {
+  const total = cart.reduce((s,i) => s + i.price*i.qty, 0);
+  const count = cart.reduce((s,i) => s + i.qty, 0);
+  document.getElementById('cart-summary').textContent = `Cart: ${count} item${count!==1?'s':''} — ₹${total}`;
+}
+
+function askAboutCart() {
+  if (!cart.length) { botMsg("Your cart is empty! Browse the products and add some items."); return; }
+  const lines = cart.map(i => `${i.emoji} ${i.name} x${i.qty} = ₹${i.price*i.qty}`).join('\n');
+  const total = cart.reduce((s,i) => s + i.price*i.qty, 0);
+  botMsg(`Your cart:\n${lines}\n\nTotal: ₹${total} 🛍️`);
+}
+
+function botMsg(text) {
+  const el = document.createElement('div');
+  el.className = 'msg bot';
+  el.textContent = text;
+  document.getElementById('messages').appendChild(el);
+  document.getElementById('messages').scrollTop = 99999;
+}
+
+function sendMsg() {
+  const input = document.getElementById('user-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  const u = document.createElement('div');
+  u.className = 'msg user'; u.textContent = text;
+  document.getElementById('messages').appendChild(u);
+  document.getElementById('messages').scrollTop = 99999;
+  setTimeout(() => botMsg(getBotReply(text)), 300);
+}
+
+botMsg("Hi! 👋 I'm ShopBot. Ask me about products, prices, shipping, or returns!");
+</script>
+</body>
+</html>
