@@ -1,0 +1,1914 @@
+SendEmailExample.apxc:
+public class SendEmailExample {
+
+    public String message {get; set;}
+    public String toEmail {get; set;}
+    public Blob fileBody {get; set;}
+    public String fileName {get; set;}
+
+    /* Email Validation Method*/
+    public static Boolean isValidEmail(String email) {
+        if(String.isBlank(email)) {
+            return false;
+        }
+        String emailRegex ='^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$';
+        Pattern pattern = Pattern.compile(emailRegex);
+        Matcher matcher = pattern.matcher(email);
+        return matcher.matches();
+    }
+
+    /* Send Email Without Attachment */
+    public static void sendEmail() {
+        String recipientEmail = 'js8chillin80@gmail.com';
+        
+        if(!isValidEmail(recipientEmail)) {
+            System.debug('Invalid Email Address');
+            return;
+        }
+        
+        Messaging.SingleEmailMessage mail = new Messaging.SingleEmailMessage();
+
+        mail.setToAddresses(new String[] {recipientEmail});
+        mail.setSubject('Test Email from Salesforce Apex');
+        mail.setPlainTextBody('Hello, this is a test email sent using Apex.');
+
+        Messaging.SendEmailResult[] results =
+            Messaging.sendEmail(
+                new Messaging.SingleEmailMessage[] {mail}
+            );
+
+        if(results[0].isSuccess()) {
+            System.debug('Email Sent Successfully');
+        }
+        else {
+            System.debug(
+                'Email Failed: ' +
+                results[0].getErrors()[0].getMessage()
+            );
+        }
+    }
+
+    /* Send Email With Attachment */
+    public static void sendEmailWithAttachment() {
+
+        String recipientEmail = 'js8chillin80@gmail.com';
+
+        if(!isValidEmail(recipientEmail)) {
+            System.debug('Invalid Email Address');
+            return;
+        }
+
+        Messaging.SingleEmailMessage mail =
+            new Messaging.SingleEmailMessage();
+
+        mail.setToAddresses(new String[] {recipientEmail});
+        mail.setSubject('Email with Attachment from Salesforce Apex');
+        mail.setPlainTextBody('Please find the attachment.');
+
+        Messaging.EmailFileAttachment attachment = new Messaging.EmailFileAttachment();
+
+        attachment.setFileName('TestFile.txt');
+        attachment.setBody(
+            Blob.valueOf('This is sample file content')
+        );
+        attachment.setContentType('text/plain');
+
+        mail.setFileAttachments(
+            new Messaging.EmailFileAttachment[] {attachment}
+        );
+
+        Messaging.SendEmailResult[] results =
+            Messaging.sendEmail(
+                new Messaging.SingleEmailMessage[] {mail}
+            );
+
+        if(results[0].isSuccess()) {
+            System.debug('Email Sent Successfully');
+        }
+        else {
+            System.debug(
+                'Email Failed: ' +
+                results[0].getErrors()[0].getMessage()
+            );
+        }
+    }
+
+    /*Send Email From Visualforce Page*/
+    public PageReference sendDynamicEmail() {
+
+        try {
+            // Check Blank Email
+            if(String.isBlank(toEmail)) {
+                message = 'Please enter email address.';
+                return null;
+            }
+
+            // Validate Email Format
+            if(!isValidEmail(toEmail)) {
+                message = 'Invalid email address format.';
+                return null;
+            }
+
+            Messaging.SingleEmailMessage mail =
+                new Messaging.SingleEmailMessage();
+
+            mail.setToAddresses(new String[] {toEmail});
+            mail.setSubject('Email from Visualforce');
+            mail.setPlainTextBody(
+                'File attached from UI.'
+            );
+
+            // Attachment Handling
+            if(fileBody != null) {
+                Messaging.EmailFileAttachment attachment =
+                    new Messaging.EmailFileAttachment();
+
+                attachment.setFileName(fileName);
+                attachment.setBody(fileBody);
+
+                attachment.setContentType(
+                    'application/octet-stream'
+                );
+
+                mail.setFileAttachments(
+                    new Messaging.EmailFileAttachment[] {
+                        attachment
+                    }
+                );
+            }
+
+            Messaging.SendEmailResult[] results =
+                Messaging.sendEmail(
+                    new Messaging.SingleEmailMessage[] {mail}
+                );
+
+            if(results[0].isSuccess()) {
+                message = 'Email sent successfully!';
+            }
+            else {
+                message =
+                    'Email failed: ' +
+                    results[0].getErrors()[0].getMessage();
+            }
+        }
+        catch(Exception e) {
+            message = 'Error: ' + e.getMessage();
+        }
+        return null;
+    }
+}
+
+/*if not working then change the settings in salesforce :
+salesforce login -> setup icon-> Deliverability-> Access level : All email->save
+*/
+
+sendEmailPage.vfp:
+<apex:page controller="SendEmailExample" sidebar="false">
+
+    <apex:form enctype="multipart/form-data">
+
+        <style>
+
+            .container {
+                width: 420px;
+                margin: 80px auto;
+                padding: 30px;
+                border-radius: 12px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                background-color: #ffffff;
+                font-family: Arial;
+            }
+
+            .title {
+                font-size: 20px;
+                font-weight: bold;
+                margin-bottom: 20px;
+                text-align: center;
+            }
+
+            .input {
+                width: 100%;
+                padding: 10px;
+                margin: 10px 0;
+                border-radius: 6px;
+                border: 1px solid #ccc;
+            }
+
+            .btn {
+                width: 100%;
+                background-color: #4CAF50;
+                color: white;
+                padding: 12px;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                margin-top: 10px;
+            }
+
+            .message {
+                margin-top: 15px;
+                font-weight: bold;
+                text-align: center;
+                color: blue;
+            }
+
+            .error {
+                color: red;
+            }
+
+        </style>
+
+        <div class="container">
+
+            <div class="title">
+                Send Email with Attachment
+            </div>
+
+            <!-- Email Input -->
+            <apex:inputText
+                value="{!toEmail}"
+                styleClass="input"
+                html-placeholder="Enter recipient email"
+            />
+
+            <!-- File Upload -->
+            <apex:inputFile
+                value="{!fileBody}"
+                filename="{!fileName}"
+                styleClass="input"
+            />
+
+            <!-- Send Button -->
+            <apex:commandButton
+                value="Send Email"
+                action="{!sendDynamicEmail}"
+                styleClass="btn"
+            />
+            
+            <!-- Success/Error Message -->
+            <div class="message">
+                <apex:outputText value="{!message}" />
+            </div>
+        </div>
+    </apex:form>
+</apex:page>
+
+
+
+*************************************************************************************************************
+
+
+ProductController.apxc:
+public class ProductController {
+    public Product__c product {get;set;}
+ 	public List<Product__c> productList { get; set; }
+    public String currentView { get; set; }
+    public String validationErrors { get; set; }
+
+    public ProductController() {
+        product = new Product__c();
+        currentView = 'menu';
+        validationErrors = '';
+    }
+
+    public void showAdd() {
+        product = new Product__c();
+        validationErrors = '';
+        currentView = 'add';
+    }
+
+    public void showEdit() {
+        product = new Product__c();
+        validationErrors = '';
+        currentView = 'edit';
+    }
+
+    public void showDelete() {
+        product = new Product__c();
+        validationErrors = '';
+        currentView = 'delete';
+    }
+
+    public void showView() {
+        loadProducts();
+        currentView = 'view';
+    }
+
+    public void backToMenu() {
+        currentView = 'menu';
+        validationErrors = '';
+    }
+
+    public void loadProducts() {
+        productList = [SELECT SerialNo__c, Name, Manufacture_Date__c, Expiray_Date__c FROM Product__c ORDER BY SerialNo__c];
+    }
+
+    public void validateFields() {
+        validationErrors = '';
+        List<String> errors = new List<String>();
+
+        if (currentView == 'add' || currentView == 'edit') {
+            if (String.isBlank(product.Name)) {
+                errors.add('Product name cannot be blank.');
+            }
+
+            if (product.SerialNo__c == null) {
+                errors.add('Serial Number cannot be blank.');
+            } else if (product.SerialNo__c <= 0) {
+                errors.add('Roll Number must be a positive number.');
+            }
+
+            if (product.Manufacture_Date__c == null) {
+                errors.add('Date cannot be blank.');
+            }
+            
+            if (product.Expiray_Date__c == null) {
+                errors.add('Date cannot be blank.');
+            }
+        }
+
+        validationErrors = String.join(errors, '|');
+    }
+
+    public void saveProduct() {
+        validateFields();
+        if (String.isNotBlank(validationErrors)) return;
+
+        try {
+            insert product;
+            ApexPages.addMessage(new ApexPages.Message(
+                ApexPages.Severity.CONFIRM, 'Product added successfully!'));
+            product = new Product__c();
+            validationErrors = '';
+            currentView = 'menu';
+        } catch (Exception e) {
+            ApexPages.addMessage(new ApexPages.Message(
+                ApexPages.Severity.ERROR, 'Error: ' + e.getMessage()));
+        }
+    }
+
+    public void loadStudentForEdit() {
+        if (product.SerialNo__c != null) {
+            List<Product__c> found = [
+                SELECT SerialNo__c, Name, Manufacture_Date__c, Expiray_Date__c
+                FROM Product__c
+                WHERE SerialNo__c = :product.SerialNo__c
+            ];
+            if (!found.isEmpty()) {
+                product = found[0];
+                currentView = 'editForm';
+                validationErrors = '';
+            } else {
+                ApexPages.addMessage(new ApexPages.Message(
+                    ApexPages.Severity.ERROR, 'No product found with that Roll Number.'));
+            }
+        }
+    }
+
+    public void updateProduct() {
+        validateFields();
+        if (String.isNotBlank(validationErrors)) return;
+
+        try {
+            update product;
+            ApexPages.addMessage(new ApexPages.Message(
+                ApexPages.Severity.CONFIRM, 'Student updated successfully!'));
+            product = new Product__c();
+            validationErrors = '';
+            currentView = 'menu';
+        } catch (Exception e) {
+            ApexPages.addMessage(new ApexPages.Message(
+                ApexPages.Severity.ERROR, 'Error: ' + e.getMessage()));
+        }
+    }
+
+    public void loadProductForDelete() {
+        if (product.SerialNo__c != null) {
+            List<Product__c> found = [
+                SELECT SerialNo__c, Name, Manufacture_Date__c, Expiray_Date__c
+                FROM Product__c
+                WHERE SerialNo__c = :product.SerialNo__c
+            ];
+            if (!found.isEmpty()) {
+                product = found[0];
+                currentView = 'deleteConfirm';
+            } else {
+                ApexPages.addMessage(new ApexPages.Message(
+                    ApexPages.Severity.ERROR, 'No product found with that Roll Number.'));
+            }
+        }
+    }
+
+    public void deleteProduct() {
+        try {
+            delete product;
+            ApexPages.addMessage(new ApexPages.Message(
+                ApexPages.Severity.CONFIRM, 'Product deleted successfully!'));
+            product = new Product__c();
+            currentView = 'menu';
+        } catch (Exception e) {
+            ApexPages.addMessage(new ApexPages.Message(
+                ApexPages.Severity.ERROR, 'Error: ' + e.getMessage()));
+        }
+    }
+}
+
+
+ProductInventory.vfp:
+<apex:page controller="ProductController" showHeader="false" sidebar="false">
+
+<style>
+    body { font-family: Arial; padding:20px; background:#f4f6f8; }
+    .container{
+    max-width:700px;
+    margin:auto;
+    background:#fff;
+    padding:25px;
+    border-radius:8px;
+    box-shadow:0 2px 8px rgba(0,0,0,.1);
+    }
+    h2{text-align:center;}
+    .btn-group{
+    display:flex;
+    gap:12px;
+    justify-content:center;
+    flex-wrap:wrap;
+    }
+    .btn{
+    padding:10px 24px;
+    border:none;
+    border-radius:4px;
+    color:white;
+    cursor:pointer;
+    }
+    .btn-add{background:#28a745;}
+    .btn-edit{background:#007bff;}
+    .btn-delete{background:#dc3545;}
+    .btn-view{background:#6c757d;}
+    .btn-back{background:#999;}
+    .btn-save{background:#28a745;}
+    .btn-confirm-del{background:#dc3545;}
+    
+    .field-block{
+    margin-bottom:15px;
+    }
+    .field-block label{
+    display:block;
+    font-weight:bold;
+    margin-bottom:5px;
+    }
+    
+    .error-box{
+    background:#fdecea;
+    border:1px solid #f5c6cb;
+    padding:12px;
+    margin-bottom:15px;
+    color:#721c24;
+    border-radius:5px;
+    }
+    
+    .info-box{
+    background:#e8f4fd;
+    border:1px solid #bee5eb;
+    padding:12px;
+    margin-bottom:15px;
+    border-radius:5px;
+    }
+    
+    .section-title{
+    font-size:18px;
+    font-weight:bold;
+    margin-bottom:20px;
+    border-bottom:2px solid #eee;
+    padding-bottom:6px;
+    }
+    
+    table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:15px;
+    }
+    th{
+    background:#343a40;
+    color:#fff;
+    padding:8px;
+    }
+    td{
+    padding:8px;
+    border-bottom:1px solid #ddd;
+    }
+</style>
+
+<div class="container">
+
+    <h2>Product Inventory Management</h2>
+    
+    <apex:form id="mainForm">
+    
+        <apex:pageMessages />
+        
+        <apex:actionFunction name="validateFieldsJS"
+                             action="{!validateFields}"
+                             rerender="validationPanel"/>
+        
+        
+        <!-- Validation -->
+        <apex:outputPanel id="validationPanel">
+        <apex:outputPanel rendered="{!validationErrors != ''}">
+        <div class="error-box">
+        <ul></ul>
+        <apex:outputText value="{!validationErrors}"
+        id="errText"
+        style="display:none"/>
+        </div>
+        
+        <script>
+        (function(){
+            var raw=document.getElementById('{!$Component.errText}').innerText;
+            if(raw){
+                var errs=raw.split('|');
+                var box=document.querySelector('.error-box ul');
+                box.innerHTML='';
+                errs.forEach(function(e){
+                if(e.trim()!=''){
+                var li=document.createElement('li');
+                li.textContent=e;
+                box.appendChild(li);
+                }
+                });
+            }
+        })();
+        </script>
+        
+        </apex:outputPanel>
+        </apex:outputPanel>
+        
+        
+        <!-- MENU -->
+        <apex:outputPanel rendered="{!currentView='menu'}">
+        
+        <div class="section-title">Menu</div>
+        
+        <div class="btn-group">
+        <apex:commandButton value="Add Product"
+        action="{!showAdd}"
+        styleClass="btn btn-add"
+        rerender="mainForm"/>
+        
+        <apex:commandButton value="Edit Product"
+        action="{!showEdit}"
+        styleClass="btn btn-edit"
+        rerender="mainForm"/>
+        
+        <apex:commandButton value="Delete Product"
+        action="{!showDelete}"
+        styleClass="btn btn-delete"
+        rerender="mainForm"/>
+        
+        <apex:commandButton value="View Products"
+        action="{!showView}"
+        styleClass="btn btn-view"
+        rerender="mainForm"/>
+        </div>
+        
+        </apex:outputPanel>
+        
+        
+        
+        <!-- ADD PRODUCT -->
+        <apex:outputPanel rendered="{!currentView='add'}">
+        
+        <div class="section-title">Add Product</div>
+        
+        <div class="field-block">
+        <label>Product Name</label>
+        <apex:inputField value="{!product.Name}"/>
+        </div>
+        
+        <div class="field-block">
+        <label>Serial Number</label>
+        <apex:inputField value="{!product.SerialNo__c}"
+        onblur="validateFieldsJS()"/>
+        </div>
+        
+        <div class="field-block">
+        <label>Manufacture Date</label>
+        <apex:inputField value="{!product.Manufacture_Date__c}"
+        onblur="validateFieldsJS()"/>
+        </div>
+        
+        <div class="field-block">
+        <label>Expiry Date</label>
+        <apex:inputField value="{!product.Expiray_Date__c}"
+        onblur="validateFieldsJS()"/>
+        </div>
+        
+        <apex:commandButton value="Add"
+        action="{!saveProduct}"
+        styleClass="btn btn-save"
+        rerender="mainForm"/>
+        
+        <apex:commandButton value="Back"
+        action="{!backToMenu}"
+        styleClass="btn btn-back"
+        rerender="mainForm"/>
+        
+        </apex:outputPanel>
+        
+        
+        
+        <!-- EDIT SEARCH -->
+        <apex:outputPanel rendered="{!currentView='edit'}">
+        
+        <div class="section-title">Edit Product</div>
+        
+        <div class="info-box">
+        Enter Product Serial Number to edit.
+        </div>
+        
+        <div class="field-block">
+        <label>Serial Number</label>
+        <apex:inputText value="{!product.SerialNo__c}"/>
+        </div>
+        
+        <apex:commandButton value="Find Product"
+        action="{!loadStudentForEdit}"
+        styleClass="btn btn-edit"
+        rerender="mainForm"/>
+        
+        <apex:commandButton value="Back"
+        action="{!backToMenu}"
+        styleClass="btn btn-back"
+        rerender="mainForm"/>
+        
+        </apex:outputPanel>
+        
+        
+        
+        <!-- EDIT FORM -->
+        <apex:outputPanel rendered="{!currentView='editForm'}">
+        
+        <div class="section-title">Update Product</div>
+        
+        <div class="field-block">
+        <label>Product Name</label>
+        <apex:inputField value="{!product.Name}"/>
+        </div>
+        
+        <div class="field-block">
+        <label>Serial Number</label>
+        <apex:inputField value="{!product.SerialNo__c}"/>
+        </div>
+        
+        <div class="field-block">
+        <label>Manufacture Date</label>
+        <apex:inputField value="{!product.Manufacture_Date__c}"/>
+        </div>
+        
+        <div class="field-block">
+        <label>Expiry Date</label>
+        <apex:inputField value="{!product.Expiray_Date__c}"/>
+        </div>
+        
+        <apex:commandButton value="Update"
+        action="{!updateProduct}"
+        styleClass="btn btn-save"
+        rerender="mainForm"/>
+        
+        <apex:commandButton value="Back"
+        action="{!backToMenu}"
+        styleClass="btn btn-back"
+        rerender="mainForm"/>
+        
+        </apex:outputPanel>
+        
+        
+        
+        <!-- DELETE SEARCH -->
+        <apex:outputPanel rendered="{!currentView='delete'}">
+        
+        <div class="section-title">Delete Product</div>
+        
+        <div class="info-box">
+        Enter Serial Number of Product to delete.
+        </div>
+        
+        <div class="field-block">
+        <label>Serial Number</label>
+        <apex:inputText value="{!product.SerialNo__c}"/>
+        </div>
+        
+        <apex:commandButton value="Find Product"
+        action="{!loadProductForDelete}"
+        styleClass="btn btn-delete"
+        rerender="mainForm"/>
+        
+        <apex:commandButton value="Back"
+        action="{!backToMenu}"
+        styleClass="btn btn-back"
+        rerender="mainForm"/>
+        
+        </apex:outputPanel>
+        
+        
+        
+        <!-- DELETE CONFIRM -->
+        <apex:outputPanel rendered="{!currentView='deleteConfirm'}">
+        
+        <div class="section-title">Confirm Delete</div>
+        
+        <div class="info-box">
+        Are you sure you want to delete this product?
+        <br/><br/>
+        
+        <b>Name:</b> {!product.Name}<br/>
+        <b>Serial No:</b> {!product.SerialNo__c}<br/>
+        <b>Manufacture:</b> {!product.Manufacture_Date__c}<br/>
+        <b>Expiry:</b> {!product.Expiray_Date__c}
+        
+        </div>
+        
+        <apex:commandButton value="Yes Delete"
+        action="{!deleteProduct}"
+        styleClass="btn btn-confirm-del"
+        rerender="mainForm"/>
+        
+        <apex:commandButton value="Back"
+        action="{!backToMenu}"
+        styleClass="btn btn-back"
+        rerender="mainForm"/>
+        
+        </apex:outputPanel>
+        
+        
+        
+        <!-- VIEW PRODUCTS -->
+        <apex:outputPanel rendered="{!currentView='view'}">
+        
+        <div class="section-title">All Products</div>
+        
+        <apex:outputPanel rendered="{!productList.size=0}">
+        <div class="info-box">
+        No products found.
+        </div>
+        </apex:outputPanel>
+        
+        
+        <apex:outputPanel rendered="{!productList.size>0}">
+        
+        <table>
+        
+        <tr>
+        <th>Name</th>
+        <th>Serial No</th>
+        <th>Manufacture Date</th>
+        <th>Expiry Date</th>
+        </tr>
+        
+        <apex:repeat value="{!productList}" var="p">
+        <tr>
+        <td>{!p.Name}</td>
+        <td>{!p.SerialNo__c}</td>
+        <td>{!p.Manufacture_Date__c}</td>
+        <td>{!p.Expiray_Date__c}</td>
+        </tr>
+        </apex:repeat>
+        
+        </table>
+        
+        </apex:outputPanel>
+        
+        <br/>
+        
+        <apex:commandButton value="Back"
+        action="{!backToMenu}"
+        styleClass="btn btn-back"
+        rerender="mainForm"/>
+        
+        </apex:outputPanel>
+    </apex:form>
+</div>
+</apex:page>
+
+
+***********************************************************************************************************
+StudentController.apxc:
+public class StudentController {
+    public Student__c student { get; set; }
+    public List<Student__c> studentList { get; set; }
+    public String currentView { get; set; }
+    public String validationErrors { get; set; }
+
+    public StudentController() {
+        student = new Student__c();
+        currentView = 'menu';
+        validationErrors = '';
+    }
+
+    public void showAdd() {
+        student = new Student__c();
+        validationErrors = '';
+        currentView = 'add';
+    }
+
+    public void showEdit() {
+        student = new Student__c();
+        validationErrors = '';
+        currentView = 'edit';
+    }
+
+    public void showDelete() {
+        student = new Student__c();
+        validationErrors = '';
+        currentView = 'delete';
+    }
+
+    public void showView() {
+        loadStudents();
+        currentView = 'view';
+    }
+
+    public void backToMenu() {
+        currentView = 'menu';
+        validationErrors = '';
+    }
+
+    public void loadStudents() {
+        studentList = [SELECT Id, Name, Roll_no__c, Mark__c FROM Student__c ORDER BY Roll_no__c];
+    }
+
+    // Called on field blur via actionFunction for real-time validation
+    public void validateFields() {
+        validationErrors = '';
+        List<String> errors = new List<String>();
+
+        if (currentView == 'add' || currentView == 'edit') {
+            // Name validation
+            if (String.isBlank(student.Name)) {
+                errors.add('Name cannot be blank.');
+            } else if (!Pattern.matches('[a-zA-Z0-9 ]+', student.Name)) {
+                errors.add('Name cannot contain special characters.');
+            }
+
+            // Roll No validation
+            if (student.Roll_no__c == null) {
+                errors.add('Roll Number cannot be blank.');
+            } else if (student.Roll_no__c <= 0) {
+                errors.add('Roll Number must be a positive number.');
+            } else {
+                // Uniqueness check (exclude current record if editing)
+                List<Student__c> existing = [
+                    SELECT Id FROM Student__c
+                    WHERE Roll_no__c = :student.Roll_no__c
+                    AND Id != :student.Id
+                ];
+                if (!existing.isEmpty()) {
+                    errors.add('Roll Number must be unique.');
+                }
+            }
+
+            // Marks validation
+            if (student.Mark__c == null) {
+                errors.add('Marks cannot be blank.');
+            } else if (student.Mark__c < 0) {
+                errors.add('Marks must be a positive number.');
+            } else if (student.Mark__c >= 100) {
+                errors.add('Marks must be less than 100.');
+            }
+        }
+
+        validationErrors = String.join(errors, '|');
+    }
+
+    public void saveStudent() {
+        validateFields();
+        if (String.isNotBlank(validationErrors)) return;
+
+        try {
+            insert student;
+            ApexPages.addMessage(new ApexPages.Message(
+                ApexPages.Severity.CONFIRM, 'Student added successfully!'));
+            student = new Student__c();
+            validationErrors = '';
+            currentView = 'menu';
+        } catch (Exception e) {
+            ApexPages.addMessage(new ApexPages.Message(
+                ApexPages.Severity.ERROR, 'Error: ' + e.getMessage()));
+        }
+    }
+
+    public void loadStudentForEdit() {
+        if (student.Roll_no__c != null) {
+            List<Student__c> found = [
+                SELECT Id, Name, Roll_no__c, Mark__c
+                FROM Student__c
+                WHERE Roll_no__c = :student.Roll_no__c
+            ];
+            if (!found.isEmpty()) {
+                student = found[0];
+                currentView = 'editForm';
+                validationErrors = '';
+            } else {
+                ApexPages.addMessage(new ApexPages.Message(
+                    ApexPages.Severity.ERROR, 'No student found with that Roll Number.'));
+            }
+        }
+    }
+
+    public void updateStudent() {
+        validateFields();
+        if (String.isNotBlank(validationErrors)) return;
+
+        try {
+            update student;
+            ApexPages.addMessage(new ApexPages.Message(
+                ApexPages.Severity.CONFIRM, 'Student updated successfully!'));
+            student = new Student__c();
+            validationErrors = '';
+            currentView = 'menu';
+        } catch (Exception e) {
+            ApexPages.addMessage(new ApexPages.Message(
+                ApexPages.Severity.ERROR, 'Error: ' + e.getMessage()));
+        }
+    }
+
+    public void loadStudentForDelete() {
+        if (student.Roll_no__c != null) {
+            List<Student__c> found = [
+                SELECT Id, Name, Roll_no__c, Mark__c
+                FROM Student__c
+                WHERE Roll_no__c = :student.Roll_no__c
+            ];
+            if (!found.isEmpty()) {
+                student = found[0];
+                currentView = 'deleteConfirm';
+            } else {
+                ApexPages.addMessage(new ApexPages.Message(
+                    ApexPages.Severity.ERROR, 'No student found with that Roll Number.'));
+            }
+        }
+    }
+
+    public void deleteStudent() {
+        try {
+            delete student;
+            ApexPages.addMessage(new ApexPages.Message(
+                ApexPages.Severity.CONFIRM, 'Student deleted successfully!'));
+            student = new Student__c();
+            currentView = 'menu';
+        } catch (Exception e) {
+            ApexPages.addMessage(new ApexPages.Message(
+                ApexPages.Severity.ERROR, 'Error: ' + e.getMessage()));
+        }
+    }
+}
+
+
+StudentPage.vfp:
+<apex:page controller="StudentController" showHeader="false" sidebar="false">
+
+<style>
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f4f6f8; }
+    .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 24px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    h2 { text-align: center; color: #333; margin-bottom: 24px; }
+    .btn-group { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .btn { padding: 10px 24px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+    .btn-add    { background: #28a745; color: #fff; }
+    .btn-edit   { background: #007bff; color: #fff; }
+    .btn-delete { background: #dc3545; color: #fff; }
+    .btn-view   { background: #6c757d; color: #fff; }
+    .btn-save   { background: #28a745; color: #fff; }
+    .btn-back   { background: #aaa; color: #fff; margin-top: 8px; }
+    .btn-confirm-del { background: #dc3545; color: #fff; }
+    .field-block { margin-bottom: 14px; }
+    .field-block label { display: block; margin-bottom: 4px; font-weight: bold; color: #444; }
+    .field-block input { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+    .error-box { background: #fdecea; border: 1px solid #f5c6cb; border-radius: 4px; padding: 10px 14px; margin-bottom: 14px; color: #721c24; }
+    .error-box ul { margin: 0; padding-left: 18px; }
+    .info-box { background: #e8f4fd; border: 1px solid #bee5eb; border-radius: 4px; padding: 10px 14px; color: #0c5460; margin-bottom: 14px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    th { background: #343a40; color: #fff; padding: 8px; text-align: left; }
+    td { padding: 8px; border-bottom: 1px solid #dee2e6; }
+    tr:hover td { background: #f1f3f5; }
+    .section-title { font-size: 16px; font-weight: bold; margin-bottom: 16px; color: #333; border-bottom: 2px solid #eee; padding-bottom: 6px; }
+</style>
+
+<div class="container">
+    <h2>Student Record Management</h2>
+
+    <apex:form id="mainForm">
+
+        <apex:pageMessages />
+
+        <!-- actionFunction for real-time validation on blur -->
+        <apex:actionFunction name="validateFieldsJS"
+                             action="{!validateFields}"
+                             rerender="validationPanel" />
+
+        <!-- Validation Error Panel -->
+        <apex:outputPanel id="validationPanel">
+            <apex:outputPanel rendered="{!validationErrors != ''}">
+                <div class="error-box">
+                    <ul>
+                        <apex:repeat value="{!validationErrors}" var="err">
+                            <!-- Errors are pipe-separated; we split in JS and show -->
+                        </apex:repeat>
+                    </ul>
+                    <!-- Using outputText + JS to render split errors -->
+                    <apex:outputText value="{!validationErrors}" id="errText" style="display:none"/>
+                </div>
+                <script>
+                    (function() {
+                        var raw = document.getElementById('{!$Component.errText}').innerText;
+                        if (raw) {
+                            var errs = raw.split('|').filter(function(e){ return e.trim() !== ''; });
+                            var box = document.querySelector('.error-box ul');
+                            if (box) {
+                                box.innerHTML = '';
+                                errs.forEach(function(e) {
+                                    var li = document.createElement('li');
+                                    li.textContent = e;
+                                    box.appendChild(li);
+                                });
+                            }
+                        }
+                    })();
+                </script>
+            </apex:outputPanel>
+        </apex:outputPanel>
+
+        <!-- ===== MENU VIEW ===== -->
+        <apex:outputPanel rendered="{!currentView == 'menu'}">
+            <div class="section-title">Menu</div>
+            <div class="btn-group">
+                <apex:commandButton value="Add Student"    action="{!showAdd}"    styleClass="btn btn-add"    rerender="mainForm"/>
+                <apex:commandButton value="Edit Student"   action="{!showEdit}"   styleClass="btn btn-edit"   rerender="mainForm"/>
+                <apex:commandButton value="Delete Student" action="{!showDelete}" styleClass="btn btn-delete" rerender="mainForm"/>
+                <apex:commandButton value="View Students"  action="{!showView}"   styleClass="btn btn-view"   rerender="mainForm"/>
+            </div>
+        </apex:outputPanel>
+
+        <!-- ===== ADD VIEW ===== -->
+        <apex:outputPanel rendered="{!currentView == 'add'}">
+            <div class="section-title">Add Student</div>
+            <div class="field-block">
+                <label>Student Name</label>
+				<apex:inputField value="{!student.Name}" onkeyup="checkNameField(this)" styleClass="form-input"/>
+            </div>
+            <div class="field-block">
+                <label>Roll Number</label>
+				<apex:inputField value="{!student.Roll_no__c}" onkeyup="checkRollField(this)" onblur="validateFieldsJS()" styleClass="form-input"/>
+            </div>
+            <div class="field-block">
+                <label>Marks</label>
+                <apex:inputField value="{!student.Mark__c}" onkeyup="checkMarksField(this)" onblur="validateFieldsJS()" styleClass="form-input"/>
+            </div>
+            <apex:commandButton value="Add"  action="{!saveStudent}"  styleClass="btn btn-save" rerender="mainForm"/>
+            <apex:commandButton value="Back" action="{!backToMenu}"   styleClass="btn btn-back" rerender="mainForm"/>
+        </apex:outputPanel>
+
+        <!-- ===== EDIT - Enter Roll Number ===== -->
+        <apex:outputPanel rendered="{!currentView == 'edit'}">
+            <div class="section-title">Edit Student</div>
+            <div class="info-box">Enter the Roll Number of the student you want to edit.</div>
+            <div class="field-block">
+                <label>Roll Number</label>
+                <apex:inputText value="{!student.Roll_no__c}" styleClass="form-input"/>
+            </div>
+            <apex:commandButton value="Find Student" action="{!loadStudentForEdit}" styleClass="btn btn-edit" rerender="mainForm"/>
+            <apex:commandButton value="Back"         action="{!backToMenu}"         styleClass="btn btn-back" rerender="mainForm"/>
+        </apex:outputPanel>
+
+        <!-- ===== EDIT FORM - Update Fields ===== -->
+        <apex:outputPanel rendered="{!currentView == 'editForm'}">
+            <div class="section-title">Update Student Details</div>
+            <div class="field-block">
+                <label>Student Name</label>
+				<apex:inputField value="{!student.Name}" onkeyup="checkNameField(this)" styleClass="form-input"/>
+            </div>
+            <div class="field-block">
+                <label>Roll Number</label>
+				<apex:inputField value="{!student.Roll_no__c}" onkeyup="checkRollField(this)" onblur="validateFieldsJS()" styleClass="form-input"/>
+            </div>
+            <div class="field-block">
+                <label>Marks</label>
+                <apex:inputField value="{!student.Mark__c}" onkeyup="checkMarksField(this)" onblur="validateFieldsJS()" styleClass="form-input"/>
+            </div>
+            <apex:commandButton value="Update" action="{!updateStudent}" styleClass="btn btn-save" rerender="mainForm"/>
+            <apex:commandButton value="Back"   action="{!backToMenu}"    styleClass="btn btn-back" rerender="mainForm"/>
+        </apex:outputPanel>
+
+        <!-- ===== DELETE - Enter Roll Number ===== -->
+        <apex:outputPanel rendered="{!currentView == 'delete'}">
+            <div class="section-title">Delete Student</div>
+            <div class="info-box">Enter the Roll Number of the student you want to delete.</div>
+            <div class="field-block">
+                <label>Roll Number</label>
+                <apex:inputText value="{!student.Roll_no__c}" styleClass="form-input"/>
+            </div>
+            <apex:commandButton value="Find Student" action="{!loadStudentForDelete}" styleClass="btn btn-delete" rerender="mainForm"/>
+            <apex:commandButton value="Back"         action="{!backToMenu}"           styleClass="btn btn-back"   rerender="mainForm"/>
+        </apex:outputPanel>
+
+        <!-- ===== DELETE CONFIRM ===== -->
+        <apex:outputPanel rendered="{!currentView == 'deleteConfirm'}">
+            <div class="section-title">Confirm Delete</div>
+            <div class="info-box">
+                Are you sure you want to delete this student?<br/>
+                <strong>Name:</strong> {!student.Name} &nbsp;
+                <strong>Roll No:</strong> {!student.Roll_no__c} &nbsp;
+                <strong>Marks:</strong> {!student.Mark__c}
+            </div>
+            <apex:commandButton value="Yes, Delete" action="{!deleteStudent}" styleClass="btn btn-confirm-del" rerender="mainForm"/>
+            <apex:commandButton value="Back"        action="{!backToMenu}"    styleClass="btn btn-back"        rerender="mainForm"/>
+        </apex:outputPanel>
+
+        <!-- ===== VIEW ALL ===== -->
+        <apex:outputPanel rendered="{!currentView == 'view'}">
+            <div class="section-title">All Students</div>
+            <apex:outputPanel rendered="{!studentList.size == 0}">
+                <div class="info-box">No students found.</div>
+            </apex:outputPanel>
+            <apex:outputPanel rendered="{!studentList.size > 0}">
+                <table>
+                    <tr>
+                        <th>Name</th>
+                        <th>Roll No</th>
+                        <th>Marks</th>
+                    </tr>
+                    <apex:repeat value="{!studentList}" var="s">
+                        <tr>
+                            <td>{!s.Name}</td>
+                            <td>{!s.Roll_no__c}</td>
+                            <td>{!s.Mark__c}</td>
+                        </tr>
+                    </apex:repeat>
+                </table>
+            </apex:outputPanel>
+            <br/>
+            <apex:commandButton value="Back" action="{!backToMenu}" styleClass="btn btn-back" rerender="mainForm"/>
+        </apex:outputPanel>
+	
+    	<script>
+        function checkNameField(input) {
+            var val = input.value;
+            var existing = input.parentNode.querySelector('.js-name-error');
+            if (existing) existing.remove();
+            if (val && /[^a-zA-Z ]/.test(val)) {
+                var err = document.createElement('div');
+                err.className = 'js-name-error';
+                err.style.cssText = 'color:#721c24;background:#fdecea;border:1px solid #f5c6cb;border-radius:4px;padding:4px 8px;margin-top:4px;font-size:13px;';
+                err.textContent = 'Name cannot contain numbers or special characters.';
+                input.parentNode.appendChild(err);
+            }
+        }
+        
+        function checkRollField(input) {
+            var val = input.value;
+            var existing = input.parentNode.querySelector('.js-roll-error');
+            if (existing) existing.remove();
+            if (val && parseFloat(val) <= 0) {
+                var err = document.createElement('div');
+                err.className = 'js-roll-error';
+                err.style.cssText = 'color:#721c24;background:#fdecea;border:1px solid #f5c6cb;border-radius:4px;padding:4px 8px;margin-top:4px;font-size:13px;';
+                err.textContent = 'Roll Number must be a positive number.';
+                input.parentNode.appendChild(err);
+            }
+        }
+        
+        function checkMarksField(input) {
+            var val = input.value;
+            var existing = input.parentNode.querySelector('.js-marks-error');
+            if (existing) existing.remove();
+            if (val && parseFloat(val) < 0) {
+                var err = document.createElement('div');
+                err.className = 'js-marks-error';
+                err.style.cssText = 'color:#721c24;background:#fdecea;border:1px solid #f5c6cb;border-radius:4px;padding:4px 8px;margin-top:4px;font-size:13px;';
+                err.textContent = 'Marks must be a positive number.';
+                input.parentNode.appendChild(err);
+            } else if (val && parseFloat(val) >= 100) {
+                var err = document.createElement('div');
+                err.className = 'js-marks-error';
+                err.style.cssText = 'color:#721c24;background:#fdecea;border:1px solid #f5c6cb;border-radius:4px;padding:4px 8px;margin-top:4px;font-size:13px;';
+                err.textContent = 'Marks must be less than 100.';
+                input.parentNode.appendChild(err);
+            }
+        }
+        </script>
+    </apex:form>
+</div>
+
+</apex:page>
+
+
+
+***********************************************************************************************************
+
+EmployeeController.apxc:
+public class EmployeeController {
+
+    public Employee__c employee { get; set; }
+    public List<Employee__c> employeeList { get; set; }
+
+    public String currentView { get; set; }
+    public String validationErrors { get; set; }
+
+    public EmployeeController() {
+        employee = new Employee__c();
+        currentView = 'menu';
+        validationErrors = '';
+        loadEmployees();
+    }
+
+    public void loadEmployees() {
+        employeeList = [
+            SELECT Id,
+                   Name,
+                   Employee_Id__c,
+                   Email_Address__c,
+                   Joining_Date__c,
+                   Salary__c
+            FROM Employee__c
+            ORDER BY Name
+        ];
+    }
+
+    public PageReference showAdd() {
+        employee = new Employee__c();
+        validationErrors = '';
+        currentView = 'add';
+        return null;
+    }
+
+    public PageReference showEdit() {
+        employee = new Employee__c();
+        validationErrors = '';
+        currentView = 'edit';
+        return null;
+    }
+
+    public PageReference showDelete() {
+        employee = new Employee__c();
+        validationErrors = '';
+        currentView = 'delete';
+        return null;
+    }
+
+    public PageReference showView() {
+        loadEmployees();
+        currentView = 'view';
+        return null;
+    }
+
+    public PageReference backToMenu() {
+        employee = new Employee__c();
+        validationErrors = '';
+        currentView = 'menu';
+        return null;
+    }
+
+    public void validateFields() {
+
+        List<String> errors = new List<String>();
+
+        if (currentView == 'add' || currentView == 'editForm') {
+
+            if (String.isBlank(employee.Name)) {
+                errors.add('Employee Name cannot be blank.');
+            }
+
+            if (employee.Employee_Id__c == null) {
+                errors.add('Employee ID cannot be blank.');
+            } 
+            else if (employee.Employee_Id__c <= 0) {
+                errors.add('Employee ID must be positive.');
+            }
+
+            if (String.isBlank(employee.Email_Address__c)) {
+                errors.add('Email Address cannot be blank.');
+            }
+
+            if (employee.Joining_Date__c == null) {
+                errors.add('Joining Date cannot be blank.');
+            }
+
+            if (employee.Salary__c == null) {
+                errors.add('Salary cannot be blank.');
+            } 
+            else if (employee.Salary__c < 0) {
+                errors.add('Salary cannot be negative.');
+            }
+        }
+
+        validationErrors = String.join(errors, '|');
+    }
+
+    public void saveEmployee() {
+
+        validateFields();
+
+        if (String.isNotBlank(validationErrors)) {
+            return;
+        }
+
+        try {
+
+            insert employee;
+
+            ApexPages.addMessage(
+                new ApexPages.Message(
+                    ApexPages.Severity.CONFIRM,
+                    'Employee added successfully!'
+                )
+            );
+
+            employee = new Employee__c();
+            validationErrors = '';
+            currentView = 'menu';
+
+            loadEmployees();
+
+        } catch (Exception e) {
+
+            ApexPages.addMessage(
+                new ApexPages.Message(
+                    ApexPages.Severity.ERROR,
+                    'Error: ' + e.getMessage()
+                )
+            );
+        }
+    }
+
+    public void loadEmployeeForEdit() {
+
+        if (employee.Employee_Id__c != null) {
+
+            List<Employee__c> found = [
+
+                SELECT Id,
+                       Name,
+                       Employee_Id__c,
+                       Email_Address__c,
+                       Joining_Date__c,
+                       Salary__c
+
+                FROM Employee__c
+
+                WHERE Employee_Id__c = :employee.Employee_Id__c
+
+                LIMIT 1
+            ];
+
+            if (!found.isEmpty()) {
+
+                employee = found[0];
+                currentView = 'editForm';
+                validationErrors = '';
+
+            } else {
+
+                ApexPages.addMessage(
+                    new ApexPages.Message(
+                        ApexPages.Severity.ERROR,
+                        'No employee found with that Employee ID.'
+                    )
+                );
+            }
+        }
+    }
+
+    public void updateEmployee() {
+
+        validateFields();
+
+        if (String.isNotBlank(validationErrors)) {
+            return;
+        }
+
+        try {
+
+            update employee;
+
+            ApexPages.addMessage(
+                new ApexPages.Message(
+                    ApexPages.Severity.CONFIRM,
+                    'Employee updated successfully!'
+                )
+            );
+
+            employee = new Employee__c();
+            validationErrors = '';
+            currentView = 'menu';
+
+            loadEmployees();
+
+        } catch (Exception e) {
+
+            ApexPages.addMessage(
+                new ApexPages.Message(
+                    ApexPages.Severity.ERROR,
+                    'Error: ' + e.getMessage()
+                )
+            );
+        }
+    }
+
+    public void loadEmployeeForDelete() {
+
+        if (employee.Employee_Id__c != null) {
+
+            List<Employee__c> found = [
+
+                SELECT Id,
+                       Name,
+                       Employee_Id__c,
+                       Email_Address__c,
+                       Joining_Date__c,
+                       Salary__c
+
+                FROM Employee__c
+
+                WHERE Employee_Id__c = :employee.Employee_Id__c
+
+                LIMIT 1
+            ];
+
+            if (!found.isEmpty()) {
+
+                employee = found[0];
+                currentView = 'deleteConfirm';
+
+            } else {
+
+                ApexPages.addMessage(
+                    new ApexPages.Message(
+                        ApexPages.Severity.ERROR,
+                        'No employee found with that Employee ID.'
+                    )
+                );
+            }
+        }
+    }
+
+    public void deleteEmployee() {
+
+        try {
+
+            delete employee;
+
+            ApexPages.addMessage(
+                new ApexPages.Message(
+                    ApexPages.Severity.CONFIRM,
+                    'Employee deleted successfully!'
+                )
+            );
+
+            employee = new Employee__c();
+            currentView = 'menu';
+
+            loadEmployees();
+
+        } catch (Exception e) {
+
+            ApexPages.addMessage(
+                new ApexPages.Message(
+                    ApexPages.Severity.ERROR,
+                    'Error: ' + e.getMessage()
+                )
+            );
+        }
+    }
+}
+
+
+
+EmployeeVfp.vfp:
+<apex:page controller="EmployeeController"
+           showHeader="false"
+           sidebar="false">
+
+<style>
+
+body{
+    font-family:Arial;
+    padding:20px;
+    background:#f4f6f8;
+}
+
+.container{
+    max-width:750px;
+    margin:auto;
+    background:#fff;
+    padding:25px;
+    border-radius:8px;
+    box-shadow:0 2px 8px rgba(0,0,0,.1);
+}
+
+h2{
+    text-align:center;
+}
+
+.btn-group{
+    display:flex;
+    gap:12px;
+    justify-content:center;
+    flex-wrap:wrap;
+}
+
+.btn{
+    padding:10px 24px;
+    border:none;
+    border-radius:4px;
+    color:white;
+    cursor:pointer;
+}
+
+.btn-add{background:#28a745;}
+.btn-edit{background:#007bff;}
+.btn-delete{background:#dc3545;}
+.btn-view{background:#6c757d;}
+.btn-back{background:#999;}
+.btn-save{background:#28a745;}
+.btn-confirm-del{background:#dc3545;}
+
+.field-block{
+    margin-bottom:15px;
+}
+
+.field-block label{
+    display:block;
+    font-weight:bold;
+    margin-bottom:5px;
+}
+
+.error-box{
+    background:#fdecea;
+    border:1px solid #f5c6cb;
+    padding:12px;
+    margin-bottom:15px;
+    color:#721c24;
+    border-radius:5px;
+}
+
+.info-box{
+    background:#e8f4fd;
+    border:1px solid #bee5eb;
+    padding:12px;
+    margin-bottom:15px;
+    border-radius:5px;
+}
+
+.section-title{
+    font-size:18px;
+    font-weight:bold;
+    margin-bottom:20px;
+    border-bottom:2px solid #eee;
+    padding-bottom:6px;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:15px;
+}
+
+th{
+    background:#343a40;
+    color:#fff;
+    padding:8px;
+}
+
+td{
+    padding:8px;
+    border-bottom:1px solid #ddd;
+}
+
+</style>
+
+<div class="container">
+
+<h2>Employee Management System</h2>
+
+<apex:form id="mainForm">
+
+<apex:pageMessages />
+
+<apex:actionFunction name="validateFieldsJS"
+                     action="{!validateFields}"
+                     rerender="validationPanel"/>
+
+<!-- Validation -->
+
+<apex:outputPanel id="validationPanel">
+
+<apex:outputPanel rendered="{!validationErrors != ''}">
+
+<div class="error-box">
+
+<ul></ul>
+
+<apex:outputText value="{!validationErrors}"
+                 id="errText"
+                 style="display:none"/>
+
+</div>
+
+<script>
+
+(function(){
+
+    var raw=document.getElementById('{!$Component.errText}').innerText;
+
+    if(raw){
+
+        var errs=raw.split('|');
+
+        var box=document.querySelector('.error-box ul');
+
+        box.innerHTML='';
+
+        errs.forEach(function(e){
+
+            if(e.trim()!=''){
+
+                var li=document.createElement('li');
+
+                li.textContent=e;
+
+                box.appendChild(li);
+            }
+        });
+    }
+
+})();
+
+</script>
+
+</apex:outputPanel>
+
+</apex:outputPanel>
+
+<!-- MENU -->
+
+<apex:outputPanel rendered="{!currentView='menu'}">
+
+<div class="section-title">Menu</div>
+
+<div class="btn-group">
+
+<apex:commandButton value="Add Employee"
+                    action="{!showAdd}"
+                    styleClass="btn btn-add"
+                    rerender="mainForm"/>
+
+<apex:commandButton value="Edit Employee"
+                    action="{!showEdit}"
+                    styleClass="btn btn-edit"
+                    rerender="mainForm"/>
+
+<apex:commandButton value="Delete Employee"
+                    action="{!showDelete}"
+                    styleClass="btn btn-delete"
+                    rerender="mainForm"/>
+
+<apex:commandButton value="View Employees"
+                    action="{!showView}"
+                    styleClass="btn btn-view"
+                    rerender="mainForm"/>
+
+</div>
+
+</apex:outputPanel>
+
+<!-- ADD EMPLOYEE -->
+
+<apex:outputPanel rendered="{!currentView='add'}">
+
+<div class="section-title">Add Employee</div>
+
+<div class="field-block">
+<label>Employee Name</label>
+<apex:inputField value="{!employee.Name}"/>
+</div>
+
+<div class="field-block">
+<label>Employee ID</label>
+<apex:inputField value="{!employee.Employee_Id__c}"
+                 onblur="validateFieldsJS()"/>
+</div>
+
+<div class="field-block">
+<label>Email Address</label>
+<apex:inputField value="{!employee.Email_Address__c}"
+                 onblur="validateFieldsJS()"/>
+</div>
+
+<div class="field-block">
+<label>Joining Date</label>
+<apex:inputField value="{!employee.Joining_Date__c}"
+                 onblur="validateFieldsJS()"/>
+</div>
+
+<div class="field-block">
+<label>Salary</label>
+<apex:inputField value="{!employee.Salary__c}"
+                 onblur="validateFieldsJS()"/>
+</div>
+
+<apex:commandButton value="Add"
+                    action="{!saveEmployee}"
+                    styleClass="btn btn-save"
+                    rerender="mainForm"/>
+
+<apex:commandButton value="Back"
+                    action="{!backToMenu}"
+                    styleClass="btn btn-back"
+                    rerender="mainForm"/>
+
+</apex:outputPanel>
+
+<!-- EDIT SEARCH -->
+
+<apex:outputPanel rendered="{!currentView='edit'}">
+
+<div class="section-title">Edit Employee</div>
+
+<div class="info-box">
+Enter Employee ID to edit.
+</div>
+
+<div class="field-block">
+<label>Employee ID</label>
+<apex:inputText value="{!employee.Employee_Id__c}"/>
+</div>
+
+<apex:commandButton value="Find Employee"
+                    action="{!loadEmployeeForEdit}"
+                    styleClass="btn btn-edit"
+                    rerender="mainForm"/>
+
+<apex:commandButton value="Back"
+                    action="{!backToMenu}"
+                    styleClass="btn btn-back"
+                    rerender="mainForm"/>
+
+</apex:outputPanel>
+
+<!-- EDIT FORM -->
+
+<apex:outputPanel rendered="{!currentView='editForm'}">
+
+<div class="section-title">Update Employee</div>
+
+<div class="field-block">
+<label>Employee Name</label>
+<apex:inputField value="{!employee.Name}"/>
+</div>
+
+<div class="field-block">
+<label>Employee ID</label>
+<apex:inputField value="{!employee.Employee_Id__c}"/>
+</div>
+
+<div class="field-block">
+<label>Email Address</label>
+<apex:inputField value="{!employee.Email_Address__c}"/>
+</div>
+
+<div class="field-block">
+<label>Joining Date</label>
+<apex:inputField value="{!employee.Joining_Date__c}"/>
+</div>
+
+<div class="field-block">
+<label>Salary</label>
+<apex:inputField value="{!employee.Salary__c}"/>
+</div>
+
+<apex:commandButton value="Update"
+                    action="{!updateEmployee}"
+                    styleClass="btn btn-save"
+                    rerender="mainForm"/>
+
+<apex:commandButton value="Back"
+                    action="{!backToMenu}"
+                    styleClass="btn btn-back"
+                    rerender="mainForm"/>
+
+</apex:outputPanel>
+
+<!-- DELETE SEARCH -->
+
+<apex:outputPanel rendered="{!currentView='delete'}">
+
+<div class="section-title">Delete Employee</div>
+
+<div class="info-box">
+Enter Employee ID to delete.
+</div>
+
+<div class="field-block">
+<label>Employee ID</label>
+<apex:inputText value="{!employee.Employee_Id__c}"/>
+</div>
+
+<apex:commandButton value="Find Employee"
+                    action="{!loadEmployeeForDelete}"
+                    styleClass="btn btn-delete"
+                    rerender="mainForm"/>
+
+<apex:commandButton value="Back"
+                    action="{!backToMenu}"
+                    styleClass="btn btn-back"
+                    rerender="mainForm"/>
+
+</apex:outputPanel>
+
+<!-- DELETE CONFIRM -->
+
+<apex:outputPanel rendered="{!currentView='deleteConfirm'}">
+
+<div class="section-title">Confirm Delete</div>
+
+<div class="info-box">
+
+Are you sure you want to delete this employee?
+
+<br/><br/>
+
+<b>Name:</b> {!employee.Name}<br/>
+<b>Employee ID:</b> {!employee.Employee_Id__c}<br/>
+<b>Email:</b> {!employee.Email_Address__c}<br/>
+<b>Joining Date:</b> {!employee.Joining_Date__c}<br/>
+<b>Salary:</b> {!employee.Salary__c}
+
+</div>
+
+<apex:commandButton value="Yes Delete"
+                    action="{!deleteEmployee}"
+                    styleClass="btn btn-confirm-del"
+                    rerender="mainForm"/>
+
+<apex:commandButton value="Back"
+                    action="{!backToMenu}"
+                    styleClass="btn btn-back"
+                    rerender="mainForm"/>
+
+</apex:outputPanel>
+
+<!-- VIEW EMPLOYEES -->
+
+<apex:outputPanel rendered="{!currentView='view'}">
+
+<div class="section-title">All Employees</div>
+
+<apex:outputPanel rendered="{!employeeList.size=0}">
+
+<div class="info-box">
+No employees found.
+</div>
+
+</apex:outputPanel>
+
+<apex:outputPanel rendered="{!employeeList.size>0}">
+
+<table>
+
+<tr>
+<th>Name</th>
+<th>Employee ID</th>
+<th>Email</th>
+<th>Joining Date</th>
+<th>Salary</th>
+</tr>
+
+<apex:repeat value="{!employeeList}" var="e">
+
+<tr>
+<td>{!e.Name}</td>
+<td>{!e.Employee_Id__c}</td>
+<td>{!e.Email_Address__c}</td>
+<td>{!e.Joining_Date__c}</td>
+<td>{!e.Salary__c}</td>
+</tr>
+
+</apex:repeat>
+
+</table>
+
+</apex:outputPanel>
+
+<br/>
+
+<apex:commandButton value="Back"
+                    action="{!backToMenu}"
+                    styleClass="btn btn-back"
+                    rerender="mainForm"/>
+
+</apex:outputPanel>
+
+</apex:form>
+
+</div>
+
+</apex:page>
