@@ -1,59 +1,35 @@
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity >=0.8.0 <0.9.0;
+//SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.0;
 
-contract MarksManagmtSys {
-    struct StudentStruct {
-        uint ID;
-        string fName;
-        string lName;
-        uint marks;
+contract StudentData{
+    struct Student{
+        string name;
+        uint rollno;
     }
 
-    address public owner;
-    uint public stdCount;
-    mapping(uint => StudentStruct) private stdRecords;
+    Student[] public studentArr;
 
-    event RecordAdded(uint ID, string fName, string lName, uint marks);
-
-    modifier onlyOwner() {
-        require(msg.sender == owner, "Access denied: Only owner");
-        _;
+    function addStudent(string memory name,uint rollno) public{
+        for(uint i=0;i<studentArr.length;i++){
+            if(studentArr[i].rollno==rollno){
+                revert("Student with roll no already exists!");
+            }
+        }
+        studentArr.push(Student(name,rollno));
     }
 
-    constructor() {
-        owner = msg.sender;
+    function displayAllStudents() public view returns(Student[] memory){
+        return studentArr;
     }
 
-    function addNewRecord(
-        uint _ID,
-        string memory _fName,
-        string memory _lName,
-        uint _marks
-    ) public onlyOwner {
-        require(_marks <= 100, "Marks must be between 0 and 100");
-        require(stdRecords[_ID].ID == 0, "Student ID already exists");
-
-        stdCount++;
-        stdRecords[_ID] = StudentStruct(_ID, _fName, _lName, _marks);
-
-        emit RecordAdded(_ID, _fName, _lName, _marks);
+    function getStudentByIndex(uint index) public view returns(Student memory){
+        require(index<studentArr.length || index > studentArr.length,"Index out of bound");
+        return studentArr[index];
     }
 
-    function getRecord(uint _ID) public view returns (StudentStruct memory) {
-        require(stdRecords[_ID].ID != 0, "Record not found");
-        return stdRecords[_ID];
+    function getLengthOfStudents() public view returns(uint){
+        return studentArr.length;
     }
 
-    function getTotalStudents() public view returns (uint) {
-        return stdCount;
-    }
 
-    // Remove payable since we don't need Ether
-    fallback() external {
-        revert("Function does not exist");
-    }
-
-    receive() external payable {
-        revert("This contract does not accept Ether");
-    }
 }

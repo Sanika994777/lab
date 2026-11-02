@@ -1,33 +1,27 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.18;
+//SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.0;
 
-contract Bank {
-    // Mapping to store balances of each customer (address)
-    mapping(address => uint256) private balances;
-
-    // Event logs
-    event Deposit(address indexed account, uint256 amount);
-    event Withdraw(address indexed account, uint256 amount);
-
-    // Deposit money into your account
-    function deposit() public payable {
-        require(msg.value > 0, "Deposit amount must be greater than zero");
-        balances[msg.sender] += msg.value;
-        emit Deposit(msg.sender, msg.value);
+contract Bank{
+    address private accOwner;
+    uint256 balance=0;
+    constructor(){
+        accOwner=msg.sender;
     }
 
-    // Withdraw money from your account
-    function withdraw(uint256 amount) public {
-        require(amount > 0, "Withdraw amount must be greater than zero");
-        require(balances[msg.sender] >= amount, "Insufficient balance");
-        
-        balances[msg.sender] -= amount;
-        payable(msg.sender).transfer(amount);
-        emit Withdraw(msg.sender, amount);
+    function Deposit() public payable{
+        require(accOwner==msg.sender,"You are not an account owner!!");
+        require(msg.value > 0, "Amount should be greater than 0.");
+        balance+=msg.value;
     }
 
-    // Show your account balance
-    function getBalance() public view returns (uint256) {
-        return balances[msg.sender];
+    function Withdraw() public payable {
+        require(accOwner==msg.sender,"You are not an account owner");
+        require(msg.value > balance,"Account doesnot have sufficient balance!");
+        balance-=msg.value;
     }
+
+    function showBalance() public view returns(uint256){
+        require(accOwner==msg.sender,"You are not an account owner");
+        return balance;
+    }
 }
